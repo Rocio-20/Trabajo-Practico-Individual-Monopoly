@@ -15,14 +15,14 @@ data Propiedad = Propiedad{
     precio :: Int
 }deriving Show
 
---Personas
+--PERSONAS
 carolina :: Persona
 carolina = Persona{
     nombre = "Carolina",
     cantidadDeDinero = 500,
     tacticaDeJuego = "Accionista",
     propiedadesCompradas = [],
-    acciones = [pasarPorElBanco, pagarAAcciones]
+    acciones = []
 }
 
 manuel :: Persona
@@ -34,38 +34,39 @@ manuel = Persona{
     acciones = [pasarPorElBanco, enojarse]
 }
 
---Acciones
+--ACCIONES
+--Pasar por el banco
 pasarPorElBanco :: Accion
-pasarPorElBanco = (modificarDinero 40).(cambiarTactica "CompradorCompulsivo")
+pasarPorElBanco = (aumentarDinero 40).(cambiarTactica "CompradorCompulsivo")
 
-modificarDinero :: Int -> Persona -> Persona
-modificarDinero dinero persona = persona{cantidadDeDinero = cantidadDeDinero persona + dinero}
+aumentarDinero :: Int -> Persona -> Persona
+aumentarDinero dinero persona = persona{cantidadDeDinero = cantidadDeDinero persona + dinero}
 
 cambiarTactica :: String -> Persona -> Persona
 cambiarTactica nuevaTactica persona = persona{tacticaDeJuego = nuevaTactica}
 
-
+--Enojarse
 enojarse :: Accion
-enojarse = (modificarDinero 50).(agregarAccion gritar)
+enojarse = (aumentarDinero 50).(agregarAccion gritar)
 
 agregarAccion :: Accion -> Persona -> Persona
 agregarAccion accion persona = persona{acciones = accion : (acciones persona) }
 
-
+--Gritar
 gritar :: Accion
 gritar persona= persona{nombre = "AHHHH" ++ nombre persona}
 
-
+--Subastar
 subastar :: Persona -> Propiedad -> Persona
 subastar persona propiedad
- | puedeComprar persona propiedad= (modificarDinero (- precio propiedad)).(agregarPropiedad propiedad) $ persona 
+ | puedeSubastar persona propiedad= (aumentarDinero (- precio propiedad)).(agregarPropiedad propiedad) $ persona 
  | otherwise = persona
 
 agregarPropiedad :: Propiedad -> Persona -> Persona
 agregarPropiedad propiedad persona = persona{propiedadesCompradas = propiedad : propiedadesCompradas persona}
 
-puedeComprar :: Persona -> Propiedad -> Bool
-puedeComprar persona propiedad= ((tieneTactica "OferenteSingular" persona) || (tieneTactica "Accionista" persona)) && cuentaConCapitalParaComprar persona propiedad
+puedeSubastar :: Persona -> Propiedad -> Bool
+puedeSubastar persona propiedad= ((tieneTactica "OferenteSingular" persona) || (tieneTactica "Accionista" persona)) && cuentaConCapitalParaComprar persona propiedad
 
 tieneTactica :: String -> Persona -> Bool
 tieneTactica tactica = (== tactica).tacticaDeJuego
@@ -73,41 +74,41 @@ tieneTactica tactica = (== tactica).tacticaDeJuego
 cuentaConCapitalParaComprar :: Persona -> Propiedad -> Bool
 cuentaConCapitalParaComprar persona propiedad = precio propiedad <= cantidadDeDinero persona
 
-
+--Cobrar alquiler
 cobrarAlquiler :: Accion
-cobrarAlquiler persona = modificarDinero (- calculoDeAlquiler persona) persona
+cobrarAlquiler persona= aumentarDinero (- calculoDeAlquiler persona) persona
 
 calculoDeAlquiler :: Persona -> Int
-calculoDeAlquiler persona = 10*(cantidadDePropiedadBaratas persona) + 20*(cantidadDePropiedadCaras persona)
+calculoDeAlquiler persona= sum.map costoAlquiler $ propiedadesCompradas persona
 
-cantidadDePropiedadCaras :: Persona -> Int
-cantidadDePropiedadCaras = length.(filter (not.propiedadBarata)).propiedadesCompradas
-
-cantidadDePropiedadBaratas :: Persona -> Int
-cantidadDePropiedadBaratas= length.filter propiedadBarata.propiedadesCompradas
+costoAlquiler :: Propiedad -> Int
+costoAlquiler propiedad
+ | propiedadBarata propiedad = 10
+ | otherwise = 20
 
 propiedadBarata :: Propiedad -> Bool
 propiedadBarata = (< 150).precio
 
-
+--Pagar a acciones
 pagarAAcciones :: Accion
 pagarAAcciones persona 
-  | not.(tieneTactica "Accionista") $ persona = modificarDinero (-100) persona
-  | otherwise = modificarDinero 200 persona
+  | not.(tieneTactica "Accionista") $ persona = aumentarDinero (-100) persona
+  | otherwise = aumentarDinero 200 persona
 
-
+--Hacer berrinche
 hacerBerrinchePor :: Persona -> Propiedad -> Persona
 hacerBerrinchePor persona propiedad 
   | cuentaConCapitalParaComprar persona propiedad = subastar persona propiedad
-  | otherwise = hacerBerrinchePor (gritar.modificarDinero 10 $ persona) propiedad
+  | otherwise = hacerBerrinchePor (gritar.aumentarDinero 10 $ persona) propiedad
 
-
+--Juego final
 juegoFinal :: Persona -> Persona -> Persona
 juegoFinal participante1 participante2 
  | cantidadDeDinero participante1 > cantidadDeDinero participante2 = participante1
  | otherwise = participante2
 
-
+--Ultima ronda
 ultimaRonda :: Persona -> Accion
-ultimaRonda persona = foldl1 (.) (acciones persona)
-
+ultimaRonda persona 
+ | null.acciones $ persona = id
+ | otherwise = foldl1 (.) (acciones persona)
